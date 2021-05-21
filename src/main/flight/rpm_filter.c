@@ -102,7 +102,7 @@ static void rpmNotchFilterInit(rpmNotchFilter_t* filter, int harmonics, int minH
         for (int motor = 0; motor < getMotorCount(); motor++) {
             for (int i = 0; i < harmonics; i++) {
                 biquadFilterInit(
-                    &filter->notch[axis][motor][i], minHz * i, looptime, filter->q, FILTER_NOTCH);
+                    &filter->notch[axis][motor][i], minHz * i, looptime, filter->q, FILTER_NOTCH, 1.0f);
             }
         }
     }
@@ -185,8 +185,14 @@ FAST_CODE_NOINLINE void rpmFilterUpdate()
         /* DEBUG_SET(DEBUG_RPM_FILTER, 1, motor); */
         /* DEBUG_SET(DEBUG_RPM_FILTER, 2, currentFilter == &gyroFilter); */
         /* DEBUG_SET(DEBUG_RPM_FILTER, 3, frequency) */
+        
+        // gradually turn off notch when approaching minHz
+        float weight = 1.0f;
+        if (frequency < currentFilter->minHz * 2.0f) {
+            weight = (frequency - currentFilter->minHz) / currentFilter->minHz;
+        }
         biquadFilterUpdate(
-            template, frequency, currentFilter->loopTime, currentFilter->q, FILTER_NOTCH);
+            template, frequency, currentFilter->loopTime, currentFilter->q, FILTER_NOTCH, weight);
         for (int axis = 1; axis < XYZ_AXIS_COUNT; axis++) {
             biquadFilter_t* clone = &currentFilter->notch[axis][currentMotor][currentHarmonic];
             clone->b0 = template->b0;

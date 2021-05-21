@@ -350,7 +350,7 @@ static FAST_CODE_NOINLINE void gyroDataAnalyseUpdate(gyroAnalyseState_t *state)
                     // Choose notch Q in such a way that notch bandwidth stays constant (improves prop wash handling)
                     float dynamicQ = state->centerFreq[state->updateAxis][p] / (float)dynNotchBandwidthHz;
                     dynamicQ = constrainf(dynamicQ, 2.0f, 10.0f);
-                    biquadFilterUpdate(&gyro.notchFilterDyn[state->updateAxis][p], state->centerFreq[state->updateAxis][p], gyro.targetLooptime, dynamicQ, FILTER_NOTCH);
+                    biquadFilterUpdate(&gyro.notchFilterDyn[state->updateAxis][p], state->centerFreq[state->updateAxis][p], gyro.targetLooptime, dynamicQ, FILTER_NOTCH, 1.0f);
                 }
             }
 
