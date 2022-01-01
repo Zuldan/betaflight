@@ -159,12 +159,6 @@ bool spiIsBusy(const extDevice_t *dev)
     return (dev->bus->curSegment != (busSegment_t *)BUS_SPI_FREE);
 }
 
-// Indicate that the bus on which this device resides may initiate DMA transfers from interrupt context
-void spiSetAtomicWait(const extDevice_t *dev)
-{
-    dev->bus->useAtomicWait = true;
-}
-
 // Wait for DMA completion
 void spiWait(const extDevice_t *dev)
 {
@@ -529,7 +523,6 @@ bool spiSetBusInstance(extDevice_t *dev, uint32_t device)
 
     bus->busType = BUS_TYPE_SPI;
     bus->useDMA = false;
-    bus->useAtomicWait = false;
     bus->deviceCount = 1;
     bus->initTx = &dev->initTx;
     bus->initRx = &dev->initRx;

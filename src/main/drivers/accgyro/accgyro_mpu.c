@@ -271,8 +271,6 @@ bool mpuGyroReadSPI(gyroDev_t *gyro)
         gyro->gyroDmaMaxDuration = 5;
         if (gyro->detectedEXTI > GYRO_EXTI_DETECT_THRESHOLD) {
             if (spiUseDMA(&gyro->dev)) {
-                // Indicate that the bus on which this device resides may initiate DMA transfers from interrupt context
-                spiSetAtomicWait(&gyro->dev);
                 gyro->dev.callbackArg = (uint32_t)gyro;
                 gyro->dev.txBuf[0] = gyro->accDataReg | 0x80;
                 gyro->segments[0].len = gyro->gyroDataReg - gyro->accDataReg + 7;
