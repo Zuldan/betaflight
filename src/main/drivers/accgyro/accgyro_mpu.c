@@ -217,9 +217,6 @@ bool mpuAccReadSPI(accDev_t *acc)
     case GYRO_EXTI_INT:
     case GYRO_EXTI_NO_INT:
     {
-        // Ensure any prior DMA has completed before continuing
-        spiWaitClaim(&acc->gyro->dev);
-
         acc->gyro->dev.txBuf[0] = MPU_RA_ACCEL_XOUT_H | 0x80;
 
         busSegment_t segments[] = {
@@ -299,9 +296,6 @@ bool mpuGyroReadSPI(gyroDev_t *gyro)
     case GYRO_EXTI_INT:
     case GYRO_EXTI_NO_INT:
     {
-        // Ensure any prior DMA has completed before continuing
-        spiWaitClaim(&gyro->dev);
-
         gyro->dev.txBuf[0] = MPU_RA_GYRO_XOUT_H | 0x80;
 
         busSegment_t segments[] = {
