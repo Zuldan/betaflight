@@ -39,6 +39,8 @@
 #include "nvic.h"
 #include "pg/bus_spi.h"
 
+#define NUM_QUEUE_SEGS 5
+
 static uint8_t spiRegisteredDeviceCount = 0;
 
 spiDevice_t spiDevice[SPIDEV_COUNT];
@@ -756,6 +758,8 @@ uint8_t spiGetExtDeviceCount(const extDevice_t *dev)
 void spiSequence(const extDevice_t *dev, busSegment_t *segments)
 {
     busDevice_t *bus = dev->bus;
+    busSegment_t *queuedEndSegments[NUM_QUEUE_SEGS];
+    uint8_t queuedEndSegmentsIndex = 0;
 
     ATOMIC_BLOCK(NVIC_PRIO_MAX) {
         if ((bus->curSegment != (busSegment_t *)BUS_SPI_LOCKED) && spiIsBusy(dev)) {
@@ -766,8 +770,30 @@ void spiSequence(const extDevice_t *dev, busSegment_t *segments)
             busSegment_t *endSegment = bus->curSegment;
 
             if (endSegment) {
-                // Find the last segment of the current transfer
-                for (; endSegment->len; endSegment++);
+                while (true) {
+                    // Find the last segment of the current transfer
+                    for (; endSegment->len; endSegment++);
+
+                    for (uint8_t n = 0; n < queuedEndSegmentsIndex; n++) {
+                        if (endSegment == queuedEndSegments[n]) {
+                            // Attempt to use the same segment list twice in the same queue. Abort.
+                            return;
+                        }
+                    }
+
+                    queuedEndSegments[queuedEndSegmentsIndex++] = endSegment;
+
+                    if (queuedEndSegmentsIndex == NUM_QUEUE_SEGS) {
+                        // Queue is too long. Abort.
+                        return;
+                    }
+
+                    if (endSegment->rxData == NULL) {
+                        break;
+                    } else {
+                        endSegment = (busSegment_t *)endSegment->rxData;
+                    }
+                }
 
                 // Record the dev and segments parameters in the terminating segment entry
                 endSegment->txData = (uint8_t *)dev;
