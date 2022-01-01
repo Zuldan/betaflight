@@ -711,38 +711,48 @@ void spiSequence(const extDevice_t *dev, busSegment_t *segments)
 
     ATOMIC_BLOCK(NVIC_PRIO_MAX) {
         if (spiIsBusy(dev)) {
-            // Defer this transfer to be triggered upon completion of the current transfer
-            busSegment_t *endSegment = bus->curSegment;
+            busSegment_t *endSegment;
 
-            if (endSegment) {
+            // Defer this transfer to be triggered upon completion of the current transfer
+            // Find the last segment of the current transfer
+            for (endSegment = segments; endSegment->len; endSegment++);
+
+            busSegment_t *endCmpSegment = bus->curSegment;
+
+            if (endCmpSegment) {
                 while (true) {
                     // Find the last segment of the current transfer
-                    for (; endSegment->len; endSegment++);
+                    for (; endCmpSegment->len; endCmpSegment++);
+
+                    if (endCmpSegment == endSegment) {
+                        // Attempt to use the new segment list twice in the same queue. Abort.
+                        return;
+                    }
 
                     for (uint8_t n = 0; n < queuedEndSegmentsIndex; n++) {
-                        if (endSegment == queuedEndSegments[n]) {
+                        if (endCmpSegment == queuedEndSegments[n]) {
                             // Attempt to use the same segment list twice in the same queue. Abort.
                             return;
                         }
                     }
 
-                    queuedEndSegments[queuedEndSegmentsIndex++] = endSegment;
+                    queuedEndSegments[queuedEndSegmentsIndex++] = endCmpSegment;
 
                     if (queuedEndSegmentsIndex == NUM_QUEUE_SEGS) {
                         // Queue is too long. Abort.
                         return;
                     }
 
-                    if (endSegment->txData == NULL) {
+                    if (endCmpSegment->txData == NULL) {
                         break;
                     } else {
-                        endSegment = (busSegment_t *)endSegment->rxData;
+                        endCmpSegment = (busSegment_t *)endCmpSegment->rxData;
                     }
                 }
 
                 // Record the dev and segments parameters in the terminating segment entry
-                endSegment->txData = (uint8_t *)dev;
-                endSegment->rxData = (uint8_t *)segments;
+                endCmpSegment->txData = (uint8_t *)dev;
+                endCmpSegment->rxData = (uint8_t *)segments;
 
                 return;
             }
